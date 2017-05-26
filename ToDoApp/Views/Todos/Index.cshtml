@@ -1,0 +1,301 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+}
+
+<br />
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            <button type="button" class="btn btn-success" data-toggle="modal" data-target="#createToDoModal"><span class="glyphicon glyphicon-plus"></span></button>
+        </div>
+        <div class="col-md-3">
+            <div class="input-group">
+                <input class="form-control" aria-label="Text input with multiple buttons" id="search-criteria" placeholder="Searching Todos by name">
+                <div class="input-group-btn">
+                    <button type="button" class="btn btn-default" aria-label="Help">
+                        <span class="glyphicon glyphicon-search"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Current Todos</h4><hr />
+            <table class="table table-bordered" id="dataTablesForCurrentTodos">
+                <thead class="thead-inverse">
+                    <tr>
+                        <th>#</th>
+                        <th>To Do</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tfoot>
+                    <tr>
+                        <th>#</th>
+                        <th>To Do</th>
+                        <th>Actions</th>
+                    </tr>
+                </tfoot>
+                <tbody id="currentTodos"></tbody>
+            </table>
+            @*Pagination here*@
+        </div>
+        <div class="col-md-6">
+            <div class="progress">
+                <div class="progress-bar progress-bar-success progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%" id="myBar">
+                    0%
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Finished Todos</h4><hr />
+            <table class="table table-bordered">
+                <thead class="thead-inverse">
+                    <tr>
+                        <th>#</th>
+                        <th>To Do</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="finishedTodos"></tbody>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <div id="liveclock" class="outer_face">
+
+                <div class="marker oneseven"></div>
+                <div class="marker twoeight"></div>
+                <div class="marker fourten"></div>
+                <div class="marker fiveeleven"></div>
+
+                <div class="inner_face">
+                    <div class="hand hour"></div>
+                    <div class="hand minute"></div>
+                    <div class="hand second"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal used for create a new todo-->
+<div class="modal fade" id="createToDoModal" role="dialog">
+    <div class="modal-dialog">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">To Do Creation</h4>
+            </div>
+            <div class="modal-body">
+                <label for="usr">Name:</label><input type="text" class="form-control" id="action">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="createToDo">Créer</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal used for update a todo-->
+<div class="modal fade" id="updateToDoModal" role="dialog">
+    <div class="modal-dialog">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">To Do Update</h4>
+            </div>
+            <div class="modal-body">
+                <label for="usr">Id:</label><input type="text" class="form-control" id="updateIdTodo" readonly>
+                <label for="usr">Name:</label><input type="text" class="form-control" id="updateNameTodo">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="updateToDo" onclick="executeUpdateToDo()">Mettre à jour</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+
+    <script type="text/javascript">
+
+        function finishToDo(id) {
+            var todo = { Id: id, Visibility: false };
+            var json = JSON.stringify(todo)
+
+            $.ajax({
+                url: '/api/Todos/' + id,
+                type: 'PUT',
+                contentType: "application/json; charset=utf-8",
+                data: json,
+                success: function () {
+                    location.href = '@Url.Content("~/Todos/Index/")';
+                }
+            });
+        };
+
+        function updateProgressBar() {
+            $.ajax({
+                url: '/api/todos/getCountFinishedTodos',
+                type: 'GET',
+                dataType: 'json',
+                success: function (v) {
+                    modifyProgressBar(v);
+                },
+                error: function (xhr, status, error) {
+                    var err = eval("(" + xhr.responseText + ")");
+                    alert(err.Message);
+                }
+            });
+        }
+
+        function modifyProgressBar(v) {
+            var elem = document.getElementById("myBar");
+            if (v == 0) {
+                elem.style.width = 0 + '%';
+                elem.innerHTML = 0 * 1 + '%';
+            }
+            else {
+                elem.style.width = v + '%';
+                elem.innerHTML = v * 1 + '%';
+            }
+        }
+
+        function deleteToDo(id) {
+            $.ajax({
+                url: '/api/todos/' + id,
+                type: 'DELETE',
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: false,
+                success: function (msg) {
+                    location.href = '@Url.Content("~/Todos/Index/")';
+                }
+            });
+        };
+
+        function updateToDo(id) {
+
+            $('#updateToDoModal').modal('show');
+
+            $.ajax({
+                url: '/api/todos/' + id,
+                type: 'GET',
+                dataType: 'json',
+                success: function (v) {
+                    document.getElementById("updateIdTodo").value = v.Id;
+                    document.getElementById("updateNameTodo").value = v.Name;
+                },
+                error: function (request, message, error) {
+                    alert('Error when trying to update todo');
+                }
+            });
+        };
+
+        function executeUpdateToDo(id) {
+
+            var id = document.getElementById("updateIdTodo").value;
+            var action = document.getElementById("updateNameTodo").value;
+
+            var todo = { Id: id, Name: action, Visibility: true, Action: "updateToDo" };
+
+            var json = JSON.stringify(todo)
+
+            $.ajax({
+                url: '/api/Todos/' + id,
+                type: 'PUT',
+                contentType: "application/json; charset=utf-8",
+                data: json,
+                success: function (results) {
+                    location.href = '@Url.Content("~/Todos/Index/")';
+                }
+            });
+        };
+
+        $(document).ready(function () {
+
+            $('#createToDo').click(function (e) {
+
+                var action = document.getElementById("action").value;
+                var todo = { Name: action, Visibility: true };
+
+                $.ajax({
+                    url: '/api/todos',
+                    type: 'POST',
+                    data: JSON.stringify(todo),
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    async: false,
+                    success: function (msg) {
+                        location.href = '@Url.Content("~/Todos/Index/")';
+                    }
+                });
+            });
+
+        });
+
+        //The code which search todos not finished based on text box
+        $("#search-criteria").on("keyup", function () {
+            var g = $(this).val().toLowerCase();
+            $("#currentTodos tr td label").each(function () {
+                var s = $(this).text().toLowerCase()
+                $(this).closest('#currentTodos')[s.indexOf(g) !== -1 ? 'show' : 'hide']();
+            });
+        });
+
+        //We clean all input in modal if we clicked on close modal
+        $('[data-dismiss=modal]').on('click', function (e) {
+            var $t = $(this),
+                target = $t[0].href || $t.data("target") || $t.parents('.modal') || [];
+
+            $(target)
+              .find("input,textarea,select")
+                 .val('')
+                 .end()
+              .find("input[type=checkbox], input[type=radio]")
+                 .prop("checked", "")
+                 .end();
+        })
+
+        function loadCurrentTodos() {
+            $.ajax({
+                url: '/api/todos/GetCurrentTodos',
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    $.each(data, function (index) {
+                        currentTodos.innerHTML += '<tr><td>' + data[index].Id + '</td><td><label>' + data[index].Name + '</label></td>' +
+                        '<td><button type="button" class="btn btn-danger" onclick="deleteToDo(' + data[index].Id + ')"><span class="glyphicon glyphicon-trash"></span></button> ' +
+                        '<button type="button" class="btn btn-success" onclick="finishToDo(' + data[index].Id + ')"><span class="glyphicon glyphicon-ok"></span></button> ' +
+                        '<button type="button" class="btn btn-primary" onclick="updateToDo(' + data[index].Id + ')"><span class="glyphicon glyphicon-pencil"></span></button>' +
+                        '</td></tr>';
+                    });
+                    $('#dataTablesForCurrentTodos').DataTable();
+                },
+                error: function (request, message, error) {
+                    alert('Error when trying to load current todos');
+                }
+            });
+        };
+
+        $(document).ready(function () {
+            updateProgressBar();
+            loadCurrentTodos();
+        });
+
+    </script>
+}
